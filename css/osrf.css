@@ -83,6 +83,7 @@ section[data-markdown] > ul {
  * SLIDE NUMBER
  *********************************************/
 .reveal .slide-number {
+  background-color: #fff;
   bottom: 20px;
   color: #44497a;
   font-size: .8em; }
