@@ -1,0 +1,421 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>The ROS buildsystem and tools</title>
+
+    <meta name="description" content="Description of the ROS buildsystem and tools">
+    <meta name="author" content="Dirk Thomas">
+
+    <link rel="stylesheet" href="css/bootstrap-3.3.7.css">
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/white.css">
+
+    <!-- Theme used for syntax highlighting of code -->
+    <!--<link rel="stylesheet" href="lib/css/zenburn.css">-->
+
+    <link rel="stylesheet" href="css/osrf.css">
+
+    <style>
+      #pull-request_rosdistro-code .hljs-attr:nth-child(4),
+      #pull-request_rosdistro-code .hljs-literal {
+        color: #c7254e;
+        font-weight: bold;
+      }
+      .reveal table.stats {
+        font-size: 0.7em;
+      }
+      .reveal table.stats th:not(:first-child) {
+        border-left: 1px solid;
+      }
+      .reveal table.stats th {
+        text-align: center;
+      }
+      .reveal table.stats th, .reveal table.stats td {
+        padding: 0 0.5em 0em 0.5em
+      }
+      .reveal table.stats td {
+        border-left: 1px solid;
+        text-align: right;
+      }
+    </style>
+
+    <!-- Printing and PDF exports -->
+    <script>
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+    </script>
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <div class="osrf-signature">
+          <svg id="osrf-logo" height="1.8em" width="1.8em" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+            <image id="osrf-logo-image" x="0" y="0" height="100%" width="100%" xlink:href="image/osrf-logo.svg"/>
+            <animateTransform id="osrf-logo-clockwise" xlink:href="#osrf-logo-image" attributeName="transform" attributeType="XML"
+              type="rotate" from="0 27 27" to="360 27 27" dur="0.7s" calcMode="spline" keySplines="0.5 0 0.5 1" keyTimes="0;1" begin="indefinite" repeatCount="0" fill="freeze"/>
+            <animateTransform id="osrf-logo-counterclockwise" xlink:href="#osrf-logo-image" attributeName="transform" attributeType="XML"
+              type="rotate" from="360 27 27" to="0 27 27" dur="0.7s" calcMode="spline" keySplines="0.5 0 0.5 1" keyTimes="0;1" begin="indefinite" repeatCount="0" fill="freeze"/>
+            <animate id="osrf-logo-flash" attributeType="CSS" attributeName="opacity"
+              dur="0.7s" values="1; 0.25; 1" keyTimes="0; 0.25; 1" repeatCount="0" />
+          </svg>
+          <svg id="osrf-lettering" height="1.4em" width="32%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+            <image x="0" y="0" height="75%" width="100%" xlink:href="image/osrf-lettering.svg"/>
+          </svg>
+        </div>
+
+        <section>
+          <img src="image/ros.png" width="10%"/>
+          <h1>Build Systems &amp;<br/>Build Tools</h1>
+          <h3>Why use something beyond CMake</h3>
+          <h3>What are the differences between catkin and ament</h3>
+          <p>
+            <small>
+              Feb. 9th 2017<br/>
+              Dirk Thomas
+            </small>
+          </p>
+        </section>
+
+        <section>
+          <section>
+            <h2>Main Benefits</h2>
+            <br/>
+            <div class="row">
+              <div class="col-xs-4 col-xs-offset-4" style="height: 5em; margin-left: 35%">
+                <i class="glyphicon glyphicon-info-sign" style="color: #44497a; font-size: 2em"></i><br/>
+                Meta <br/>information
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-xs-4" style="height: 5em; margin-left: 10%">
+                <i class="glyphicon glyphicon-pencil" style="color: #44497a; font-size: 2em"></i><br/>
+                CMake config file <br/>generation
+              </div>
+              <div class="col-xs-4" style="height: 5em; margin-left: 20%">
+                <i class="glyphicon glyphicon-wrench" style="color: #44497a; font-size: 2em"></i><br/>
+                Environment <br/>setup
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-xs-4 col-xs-offset-4" style="height: 6em; margin-left: 35%">
+                <i class="glyphicon glyphicon-sort-by-attributes" style="color: #44497a; font-size: 2em"></i><br/>
+                Build / test / package <br/>multiple packages
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section>
+          <section>
+            <h2><i class="glyphicon glyphicon-info-sign" style="font-size: 0.7em"></i> Meta Information</h2>
+            <ul>
+              <li style="list-style-type: none"><b>Machine readable meta information</b>
+                <ul>
+                  <li>Package name and version</li>
+                  <li>Maintainer name and email, licenses</li>
+                  <li>Dependencies</li>
+                  <li>Links to source, doc, issues</li>
+                  <li>Arbitrary additional information in the <i>export</i> section</li>
+                </ul>
+              </li>
+              <li class="fragment" data-fragment-index="1" style="list-style-type: none"><br/><b>&nbsp;&nbsp;&rarr; Automation, automation, and automation</b>
+                <ul>
+                  <li>Use dependencies to determine topological order</li>
+                  <li>Name, version, maintainers and licenses <br/>are required for the packaging process</li>
+                  <li>Use links to guide users</li>
+                  <li>E.g. export plugin information</li>
+                </ul>
+              </li>
+            </ul>
+            <div class="fragment" data-fragment-index="1" style="margin-left:14em"><br/>For more details see <a href="http://www.ros.org/reps/rep-0140.html">REP 140</a>.</div>
+          </section>
+
+          <section>
+            <h2><i class="glyphicon glyphicon-pencil" style="font-size: 0.7em"></i> CMake config file generation <span style="font-size: 0.6em">(just for convenience)</span></h2>
+            <ul>
+              <li style="list-style-type: none"><b>In order for <code>find_package(foo)</code> to work</b>
+                <ul>
+                  <li>You need to have a CMake config file (or module)</li>
+                  <li>By convention it should set the following variables:
+                    <ul style="font-size: 0.9em">
+                      <li><code>foo_FOUND</code>, <code>foo_VERSION(_...)</code></li>
+                      <li><code>foo_INCLUDE_DIRECTORIES</code></li>
+                      <li><code>foo_LIBRARIES</code> (abs. paths or library names)</li>
+                      <li><code>foo_LIBRARY_DIR</code> (if the prev. one contains names)</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              <li class="fragment" style="list-style-type: none"><b>Naming Conventions</b>
+                <ul>
+                  <li>Possible file names (see <a href="https://cmake.org/cmake/help/v3.5/command/find_package.html">find_package() docs</a>):
+                    <ul style="font-size: 0.9em">
+                      <li><code>&lt;name&gt;Config.cmake</code></li>
+                      <li><code>&lt;lower-case-name&gt;-config.cmake</code></li>
+                    </ul>
+                  </li>
+                  <li>Existing CMake config files are written inconsistently, you don't know which case the set variable names will have
+                    <ul style="font-size: 0.9em">
+                      <li>ROS uses the second pattern and ensures that all of the following are lower case: find_package() name, filename, variable prefix.</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </section>
+
+          <section>
+            <h2><i class="glyphicon glyphicon-wrench" style="font-size: 0.7em"></i> Environment Setup</h2>
+            <ul>
+              <li style="list-style-type: none">After building and installing packages you might need to <br/>set / extend environment variables in order to use the software:<br/>
+                <ul>
+                  <li>Prepend / append a path to <code>PATH</code> to find executables <br/>in non-standard locations</li>
+                  <li>Set the <code>PYTHONPATH</code> to find Python modules <br/>in non-standard locations</li>
+                  <li>Set application specific information, <br/>e.g. <code>GAZEBO_MODEL_PATH</code>, <code>ROSDISTRO_NAME</code></li>
+                  <li>Source e.g. a <i>Bash</i> script for completion functionality</li>
+                </ul>
+              </li>
+              <li class="fragment" style="list-style-type: none"><br/><b>The goal:</b><br/>
+                <ul>
+                  <li style="list-style-type: none">Source a single file which takes care of <i>"everything"</i></li>
+                </ul>
+              </li>
+            </ul>
+          </section>
+
+          <section>
+            <h2><i class="glyphicon glyphicon-sort-by-attributes" style="font-size: 0.7em"></i> Automation</h2>
+            <ul>
+              <li style="list-style-type: none">Instead of reading the <i>README</i> of each package and execute the steps manually for each package in topological order... <span style="color: #c7254e">&#9785;</span></li>
+              <li class="fragment" data-fragment-index="1" style="list-style-type: none"><br/><b>Build all package in ROS Kinetic with <code>5 (!)</code> lines:</b>
+                <ul>
+                  <li>Get the code:
+                    <ul style="font-size: 0.9em">
+                      <li style="list-style-type: none"><code>rosinstall_generator</code></li>
+                      <li style="list-style-type: none"><code>wstool</code> / <code>vcstool</code></li>
+                    </ul>
+                  </li>
+                  <li>Install dependencies:
+                    <ul style="font-size: 0.9em">
+                      <li style="list-style-type: none"><code>rosdep install</code></li>
+                    </ul>
+                  </li>
+                  <li>Build a workspace of packages:
+                    <ul style="font-size: 0.9em">
+                      <li style="list-style-type: none"><code>catkin_make(_isolated)</code> / <code>catkin build</code> / <code>ament build</code> / <code>?</code></li>
+                    </ul>
+                  </li>
+                  <li>Source single file:
+                    <ul style="font-size: 0.9em">
+                      <li style="list-style-type: none"><code>. setup.bash</code></li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              <li class="fragment" data-fragment-index="1" style="list-style-type: none"><br/>The ROS buildfarm basically uses the same steps.</li>
+            </ul>
+          </section>
+        </section>
+
+        <section>
+          <section>
+            <h2>Build System vs. Build Tool</h2>
+
+            <table border="1" rules="all" frame="void">
+              <tr>
+                <th></th>
+                <th align="center">Build system</th>
+                <th align="center" class="fragment" data-fragment-index="1">Build tool</th>
+              </tr>
+              <tr>
+                <th>Operate&nbsp;on</th>
+                <td align="center">a single package</td>
+                <td align="center" class="fragment" data-fragment-index="1">a set of packages</td>
+              </tr>
+              <tr>
+                <th>Invoking</th>
+                <td align="center">E.g. <i>python setup.py install</i> <br/><span style="font-size: 0.6em">or</span><br/><i>cmake</i>, <i>make</i>, <i>make install</i></td>
+                <td align="center" class="fragment" data-fragment-index="1">the build system <br/>for each package <br/> in topological order</td>
+              </tr>
+              <tr>
+                <th>In ROS 1</th>
+                <td align="center"><i>catkin</i>, <i>CMake</i></td>
+                <td align="center" class="fragment" data-fragment-index="1"><i>catkin_make(_iso.)</i> [catkin], <br/><i>catkin build</i> [catkin_tools]</td>
+              </tr>
+              <tr>
+                <th>In ROS 2</th>
+                <td align="center"><i>ament_cmake</i>, <i>CMake</i>, <i>Python</i></td>
+                <td align="center" class="fragment" data-fragment-index="1"><i>ament build</i> [ament_tools]</td>
+              </tr>
+              <tr>
+                <th>Alternative</th>
+                <td align="center">Manifest still required, <br/>man. gen. CMake config, <br/>environment setup??</td>
+                <td align="center" class="fragment" data-fragment-index="1">Build each package manually</td>
+              </tr>
+            </table>
+            <ul class="fragment" style="text-align:right">
+              <li style="list-style-type: none">Any <i>build tool</i> should be able to support any <i>build system</i>,</li>
+              <li style="list-style-type: none">but that is currently not the case <span style="color: #ffa500">&#128542;</span></li>
+            </ul>
+          </section>
+        </section>
+
+        <section>
+          <section>
+            <h2>Build Systems: <i>catkin</i> vs. <i>ament</i></h2>
+
+            <table border="1" rules="all" frame="void">
+              <tr>
+                <th></th>
+                <th align="center">catkin</th>
+                <th align="center">ament_cmake</th>
+              </tr>
+              <tr>
+                <th>Platform support</th>
+                <td align="center">Linux, MacOS, <br/><span style="color: #ffa500">Windows &#128540;</span></td>
+                <td align="center">Linux, MacOS, <br/>Windows</td>
+              </tr>
+              <tr class="fragment">
+                <th>CMake ver.</th>
+                <td align="center">&gt;= 2.8.11</td>
+                <td align="center">&gt;= 3.5</td>
+              </tr>
+              <tr class="fragment">
+                <th>Devel space <br/><span style="font-weight: normal">vs.</span> <br/>Symlinks</th>
+                <td align="center">Devel space is "custom", <br/>pkgs need to work <br/>around spec. issues <span style="color: #c7254e">&#128533;</span></td>
+                <td align="center">Symlinking instead of copying on install is <br/>transparent to the pkg <span style="color: #008000">&#128521;</span></td>
+              </tr>
+              <tr class="fragment">
+                <th>catkin_basic <br/><span style="font-weight: normal">vs.</span> <br/>ament_auto</th>
+                <td align="center">Simplify writing CMake code, <br/>can't handle certain cases "by design", therefore abandoned</td>
+                <td align="center">Convention <br/>over configuration, may become the "default" <span style="color: #008000">&#128525;</span></td>
+              </tr>
+              <tr class="fragment">
+                <th>crawling <br/><span style="font-weight: normal">vs.</span> index</th>
+                <td align="center">Lots of filesystem crawling <span style="color: #c7254e">&#128546;</span></td>
+                <td align="center">Index built at build time, runtime lookup fast <span style="color: #008000">&#128525;</span></td>
+              </tr>
+            </table>
+            <ul class="fragment" style="font-size: 0.9em; text-align:right">
+              <li style="list-style-type: none">For more details see the ROS 2 design article <a href="http://design.ros2.org/articles/ament.html#how-is-ament-different-from-catkin">The meta build system ament</a></li>
+              <li style="list-style-type: none">and the doc about the <a href="https://github.com/ament/ament_cmake/blob/master/ament_cmake_core/doc/resource_index.md">ament resource index</a>.</li>
+            </ul>
+
+            <aside class="notes">
+              <ul>
+                <li>Removal of devel space will break many use cases even though an alternative exists.</li>
+                <li>Location of <code>*_package()</code> call has changed.</li>
+              </ul>
+            </aside>
+          </section>
+
+          <section>
+            <h2>More Features of both Build Systems</h2>
+            <ul>
+              <li style="list-style-type: none"><b>Convenience functionality</b>
+                <ul>
+                  <li>Generation of <code>pkg-config</code> files (only in catkin)</li>
+                  <li>CMake functions for <code>gtest</code> / <code>nose</code> tests</li>
+                  <li>Download test data</li>
+                  <li>CMake variables to simplify target arguments <br/>(e.g. aggregate include dirs and libraries)</li>
+                </ul>
+              </li>
+              <li class="fragment" style="list-style-type: none"><br/><b>Functionality provided by other packages</b>
+                <ul>
+                  <li>Code generation for ROS messages / services (e.g. genmsg)</li>
+                  <li>Support for launch file based ROS tests (rostest)</li>
+                  <li>Linter integration to automate checking code style, static code analysis, etc. (ament_lint)</li>
+                </ul>
+              </li>
+            </ul>
+
+            <aside class="notes">
+              <ul>
+                <li><code>catkin</code> package is monolithic providing e.g. <code>gtest</code> support. But that approach make integrating <code>gmock</code>support much more difficult.</li>
+                <li><code>ament_cmake</code> package is modular (actually composed out of 15 pkgs), <code>gtest</code> and <code>gmock</code> can easily live side-by-side.</li>
+              </ul>
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section>
+            <h2>Build Tools: <br/><i>catkin_make</i> vs. <i>catkin_tools</i> vs. <i>ament_tools</i></h2>
+
+            <table border="1" rules="all" frame="void">
+              <tr>
+                <th></th>
+                <th align="center">catkin_make(_isolated)</th>
+                <th align="center">catkin_tools</th>
+                <th align="center">ament_tools</th>
+              </tr>
+              <tr>
+                <th>Platforms</th>
+                <td align="center">Lin, Mac, <span style="color: #ffa500">Win</span></td>
+                <td align="center">Lin, Mac, <span style="color: #ffa500">Win</span></td>
+                <td align="center">Lin, Mac, Win</td>
+              </tr>
+              <tr class="fragment">
+                <th>Python ver.</th>
+                <td align="center">&gt;= 2.7</td>
+                <td align="center">&gt;= 2.7</td>
+                <td align="center">&gt;= 3.5</td>
+              </tr>
+              <tr class="fragment">
+                <th><br/><i class="glyphicon glyphicon-plus"></i></th>
+                <td align="center">Recommended tool, proven reliability</td>
+                <td align="center">Many great usa&shy;bility features, <span style="font-size:0.9em">e.g. <code>config</code>, <code>profile</code></span></td>
+                <td align="center">Python pkgs, ROS 2 (only), modularity</td>
+              </tr>
+              <tr class="fragment">
+                <th><br/><i class="glyphicon glyphicon-minus"></i></th>
+                <td align="center">No package level parallelization, <br/>tailored to catkin</td>
+                <td align="center">Not recommended yet, tailored to catkin</td>
+                <td align="center">Almost no usability features</td>
+              </tr>
+            </table>
+            <ul class="fragment" style="font-size: 0.9em; text-align:right">
+              <li style="list-style-type: none"><i>We are evaluating options to have one tool merging the best of all, <br/>maybe even support uses cases like building Gazebo and its dependencies.</i></li>
+            </ul>
+          </section>
+        </section>
+
+        <section>
+          <h2 style="text-align: left;">Questions...</h2>
+          <img src="image/qrcode_2017-02-09_ros-buildsystem.svg" width="20%" style="text-align: left;" alt=""/>
+          <br/>
+          <p style="text-align: right;">
+            For more information go to:<br/>
+            <a href="http://wiki.ros.org/catkin/conceptual_overview">wiki.ros.org/catkin/conceptual_overview</a><br/>
+            <a href="http://design.ros2.org/articles/ament.html">design.ros2.org/articles/ament.html</a>
+          </p>
+        </section>
+      </div>
+    </div>
+
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.js"></script>
+
+    <script>
+      // More info https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        history: true,
+
+        // More info https://github.com/hakimel/reveal.js#dependencies
+        dependencies: [
+          { src: 'plugin/markdown/marked.js' },
+          { src: 'plugin/markdown/markdown.js' },
+          { src: 'plugin/notes/notes.js', async: true },
+          { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+        ]
+      });
+    </script>
+  </body>
+</html>
